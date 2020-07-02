@@ -23,6 +23,7 @@ namespace pc_keys
         [Hidden]
         public async Task AddKeys(CommandContext ctx, [Description("User to add a key to")] DiscordMember member)
         {
+            //Restrict the use of this command to only specified roles
             bool permitted = false;
             foreach (ulong l in Bot.Config.PermittedRoles)
             {
@@ -33,25 +34,26 @@ namespace pc_keys
                 }
             }
             if (!permitted) return;
-            
-            string json;
-            using var fs = File.Open(Bot.Config.FileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-            using var sr = new StreamReader(fs);
-            json = sr.ReadToEnd() ?? "";
-            sr.Close();
 
+            var json = LoadFile();
+
+            //Parse the JSON. If the parse fails (usually due to empty string), create a new dictionary
             var dict = JsonConvert.DeserializeObject<Dictionary<string, int>>(json) ?? new Dictionary<string, int>();
+            //If user isn't in the dictionary, add them with no keys.
             if (!dict.ContainsKey(member.Username))
                 dict.Add(member.Username, 0);
-
+            
+            //Update their key count, grant them a new role if necessary
             var value = dict[member.Username] + 1;
             if (Bot.Config.Roles.ContainsKey(value))
                 await member.GrantRoleAsync(ctx.Guild.GetRole(Bot.Config.Roles[value]));
 
+            //Save the JSON back to the file
             dict[member.Username] = value;
             string toSave = JsonConvert.SerializeObject(dict);
             File.WriteAllText(Bot.Config.FileName, toSave);
 
+            //Send an update message
             string keys = dict[member.Username] == 1 ? "key!" : "keys!";
             await ctx.RespondAsync($"{member.Username} now has {value} {keys}");
         }
@@ -59,21 +61,30 @@ namespace pc_keys
         [Command("getkeys"), Description("Gets the number of keys a user has")]
         public async Task GetKeys(CommandContext ctx, [Description("User to get keys from")] DiscordMember member)
         {
-            string json;
-            using var fs = File.OpenRead(Bot.Config.FileName);
-            using var sr = new StreamReader(fs);
-            json = sr.ReadToEnd();
+            var json = LoadFile();
             
-            var dict = JsonConvert.DeserializeObject<Dictionary<string, int>>(json);
-            if (!dict.ContainsKey(member.Username))
-            {
-                await ctx.RespondAsync($"{member.Username} does not have any keys.");
-            }
-            else
+            //Parse the JSON. If the parse fails (usually due to empty string), create a new dictionary
+            var dict = JsonConvert.DeserializeObject<Dictionary<string, int>>(json) ?? new Dictionary<string, int>();
+            if (dict.ContainsKey(member.Username))
             {
                 string keys = dict[member.Username] == 1 ? "key!" : "keys!";
                 await ctx.RespondAsync($"{member.Username} has {dict[member.Username]} {keys}");
             }
+            else
+            {
+                await ctx.RespondAsync($"{member.Username} does not have any keys.");
+            }
+        }
+
+        private string LoadFile()
+        {
+            //Open the JSON file, or create a new one if it doesn't exist already
+            using var fs = File.Open(Bot.Config.FileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+            using var sr = new StreamReader(fs);
+            //If ReadToEnd returns null (empty file), set json to an empty string
+            var json = sr.ReadToEnd() ?? "";
+            sr.Close();
+            return json;
         }
     }
 }
