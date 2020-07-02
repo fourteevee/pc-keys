@@ -4,6 +4,6 @@
     "prefix": "-",
     "storageFile": "storage.json",
     "roleThreshold": {
-        
-    }
+    },
+    "addKeyRoles": []
 }

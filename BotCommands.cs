@@ -20,8 +20,20 @@ namespace pc_keys
     public class BasicCommands
     {
         [Command("addkey"), Description("Add a key to a user, updating role as necessary")]
+        [Hidden]
         public async Task AddKeys(CommandContext ctx, [Description("User to add a key to")] DiscordMember member)
         {
+            bool permitted = false;
+            foreach (ulong l in Bot.Config.PermittedRoles)
+            {
+                if (ctx.Member.Roles.Contains(ctx.Guild.GetRole(l)))
+                {
+                    permitted = true;
+                    break;
+                }
+            }
+            if (!permitted) return;
+            
             string json;
             using var fs = File.Open(Bot.Config.FileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             using var sr = new StreamReader(fs);
