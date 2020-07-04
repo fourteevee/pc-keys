@@ -41,17 +41,16 @@ namespace pc_keys
                 }
             }
             if (!permitted) return;
-
             var json = LoadFile();
 
             //Parse the JSON. If the parse fails (usually due to empty string), create a new dictionary
-            var dict = JsonConvert.DeserializeObject<Dictionary<string, int>>(json) ?? new Dictionary<string, int>();
+            var dict = JsonConvert.DeserializeObject<Dictionary<ulong, int>>(json) ?? new Dictionary<ulong, int>();
             //If user isn't in the dictionary, add them with no keys.
-            if (!dict.ContainsKey(member.Username))
-                dict.Add(member.Username, 0);
+            if (!dict.ContainsKey(member.Id))
+                dict.Add(member.Id, 0);
             
             //Update their key count, grant them a new role if necessary
-            var value = dict[member.Username] + keys;
+            var value = dict[member.Id] + keys;
             ulong role = 0;
             foreach (int k in Bot.Config.Roles.Keys)
             {
@@ -63,13 +62,13 @@ namespace pc_keys
                 await ctx.Member.GrantRoleAsync(ctx.Guild.GetRole(role), "Gained enough keys.");
             
             //Save the JSON back to the file
-            dict[member.Username] = value;
+            dict[member.Id] = value;
             string toSave = JsonConvert.SerializeObject(dict);
             File.WriteAllText(Bot.Config.FileName, toSave);
 
             //Send an update message
-            string keyStr = dict[member.Username] == 1 ? "key!" : "keys!";
-            await ctx.RespondAsync($"{member.Username} now has {value} {keyStr}");
+            string keyStr = value == 1 ? "key!" : "keys!";
+            await ctx.RespondAsync($"{member.Nickname ?? member.Username} now has {value} {keyStr}");
         }
         
         [Command("getkeys"), Description("Gets the number of keys a user has")]
@@ -78,15 +77,15 @@ namespace pc_keys
             var json = LoadFile();
             
             //Parse the JSON. If the parse fails (usually due to empty string), create a new dictionary
-            var dict = JsonConvert.DeserializeObject<Dictionary<string, int>>(json) ?? new Dictionary<string, int>();
-            if (dict.ContainsKey(member.Username))
+            var dict = JsonConvert.DeserializeObject<Dictionary<ulong, int>>(json) ?? new Dictionary<ulong, int>();
+            if (dict.ContainsKey(member.Id))
             {
-                string keys = dict[member.Username] == 1 ? "key!" : "keys!";
-                await ctx.RespondAsync($"{member.Username} has {dict[member.Username]} {keys}");
+                string keys = dict[member.Id] == 1 ? "key!" : "keys!";
+                await ctx.RespondAsync($"{member.Nickname ?? member.Username} has {dict[member.Id]} {keys}");
             }
             else
             {
-                await ctx.RespondAsync($"{member.Username} does not have any keys.");
+                await ctx.RespondAsync($"{member.Nickname ?? member.Username} does not have any keys.");
             }
         }
 
