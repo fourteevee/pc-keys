@@ -21,7 +21,14 @@ namespace pc_keys
     {
         [Command("addkey"), Description("Add a key to a user, updating role as necessary")]
         [Hidden]
-        public async Task AddKeys(CommandContext ctx, [Description("User to add a key to")] DiscordMember member)
+        public async Task AddKey(CommandContext ctx, [Description("User to add a key to")] DiscordMember member)
+        {
+            await AddKeys(ctx, 1, member);
+        }
+
+        [Command("addkeys"), Description("Add multiple keys to a user, updating role as necessary")]
+        public async Task AddKeys(CommandContext ctx, [Description("Number of keys to add")] int keys,
+            [Description("User to add a key to")] DiscordMember member)
         {
             //Restrict the use of this command to only specified roles
             bool permitted = false;
@@ -44,20 +51,27 @@ namespace pc_keys
                 dict.Add(member.Username, 0);
             
             //Update their key count, grant them a new role if necessary
-            var value = dict[member.Username] + 1;
-            if (Bot.Config.Roles.ContainsKey(value))
-                await member.GrantRoleAsync(ctx.Guild.GetRole(Bot.Config.Roles[value]));
+            var value = dict[member.Username] + keys;
+            ulong role = 0;
+            foreach (int k in Bot.Config.Roles.Keys)
+            {
+                if (value >= k)
+                    role = Bot.Config.Roles[k];
+            }
 
+            if (role != 0)
+                await ctx.Member.GrantRoleAsync(ctx.Guild.GetRole(role), "Gained enough keys.");
+            
             //Save the JSON back to the file
             dict[member.Username] = value;
             string toSave = JsonConvert.SerializeObject(dict);
             File.WriteAllText(Bot.Config.FileName, toSave);
 
             //Send an update message
-            string keys = dict[member.Username] == 1 ? "key!" : "keys!";
-            await ctx.RespondAsync($"{member.Username} now has {value} {keys}");
+            string keyStr = dict[member.Username] == 1 ? "key!" : "keys!";
+            await ctx.RespondAsync($"{member.Username} now has {value} {keyStr}");
         }
-
+        
         [Command("getkeys"), Description("Gets the number of keys a user has")]
         public async Task GetKeys(CommandContext ctx, [Description("User to get keys from")] DiscordMember member)
         {
