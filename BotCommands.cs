@@ -20,7 +20,6 @@ namespace pc_keys
     public class BasicCommands
     {
         [Command("addkey"), Description("Add a key to a user, updating role as necessary")]
-        [Hidden]
         public async Task AddKey(CommandContext ctx, [Description("User to add a key to")] DiscordMember member)
         {
             await AddKeys(ctx, 1, member);
@@ -32,9 +31,9 @@ namespace pc_keys
         {
             //Restrict the use of this command to only specified roles
             bool permitted = false;
-            foreach (ulong l in Bot.Config.PermittedRoles)
+            foreach (ulong checkRole in Bot.Config.PermittedRoles)
             {
-                if (ctx.Member.Roles.Contains(ctx.Guild.GetRole(l)))
+                if (ctx.Member.Roles.Contains(ctx.Guild.GetRole(checkRole)))
                 {
                     permitted = true;
                     break;
@@ -55,16 +54,20 @@ namespace pc_keys
             foreach (int k in Bot.Config.Roles.Keys)
             {
                 if (value >= k)
+                {
                     role = Bot.Config.Roles[k];
+                }
             }
 
             if (role != 0)
-                await ctx.Member.GrantRoleAsync(ctx.Guild.GetRole(role), "Gained enough keys.");
+            {
+                await ctx.Guild.GrantRoleAsync(member, ctx.Guild.GetRole(role), "Gained enough keys.");
+            }
             
             //Save the JSON back to the file
             dict[member.Id] = value;
             string toSave = JsonConvert.SerializeObject(dict);
-            File.WriteAllText(Bot.Config.FileName, toSave);
+            await File.WriteAllTextAsync(Bot.Config.FileName, toSave);
 
             //Send an update message
             string keyStr = value == 1 ? "key!" : "keys!";
@@ -94,8 +97,7 @@ namespace pc_keys
             //Open the JSON file, or create a new one if it doesn't exist already
             using var fs = File.Open(Bot.Config.FileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             using var sr = new StreamReader(fs);
-            //If ReadToEnd returns null (empty file), set json to an empty string
-            var json = sr.ReadToEnd() ?? "";
+            var json = sr.ReadToEnd();
             sr.Close();
             return json;
         }
