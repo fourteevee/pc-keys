@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 namespace pc_keys
 {
     /// <summary>
-    /// Basic commands that don't have to do with parsing. Rules, ping, etc.
+    /// Basic commands.
     /// </summary>
     [Description("Basic bot commands.")]
     public class BasicCommands
